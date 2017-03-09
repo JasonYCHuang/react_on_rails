@@ -6,6 +6,7 @@
 require "react_on_rails/prerender_error"
 require "addressable/uri"
 require "react_on_rails/utils"
+require "yajl"
 
 module ReactOnRailsHelper
   include ReactOnRails::Utils::Required
@@ -174,7 +175,7 @@ module ReactOnRailsHelper
   end
 
   def sanitized_props_string(props)
-    props.is_a?(String) ? json_escape(props) : props.to_json
+    props.is_a?(String) ? ERB::Util.json_escape(props) : props.to_json
   end
 
   # Helper method to take javascript expression and returns the output from evaluating it.
@@ -225,30 +226,36 @@ module ReactOnRailsHelper
 
   private
 
+  def json_safe_and_pretty(something)
+    if Rails.env.development?
+      ERB::Util.json_escape(JSON.pretty_generate(something.as_json))
+    else
+      ERB::Util.json_escape(something.to_json)
+    end
+  end
+
   # prepend the rails_context if not yet applied
   def prepend_render_rails_context(render_value)
     return render_value if @rendered_rails_context
 
-    data = {
-      rails_context: rails_context(server_side: false)
-    }
+    data = rails_context(server_side: false)
 
     @rendered_rails_context = true
 
-    rails_context_content = content_tag(:div,
-                                        "",
-                                        id: "js-react-on-rails-context",
-                                        style: ReactOnRails.configuration.skip_display_none ? nil : "display:none",
-                                        data: data)
+    rails_context_content = content_tag(:script,
+                                        "#{json_safe_and_pretty(data)}".html_safe,
+                                        type: 'application/json',
+                                        id: 'js-react-on-rails-context')
+
     "#{rails_context_content}\n#{render_value}".html_safe
   end
 
   def render_redux_store_data(redux_store_data)
-    result = content_tag(:div,
-                         "",
-                         class: "js-react-on-rails-store",
-                         style: ReactOnRails.configuration.skip_display_none ? nil : "display:none",
-                         data: redux_store_data)
+    result = content_tag(:script,
+                         "#{json_safe_and_pretty(redux_store_data[:props])}".html_safe,
+                         type: 'application/json',
+                         'data-js-react-on-rails-store' => redux_store_data[:store_name].html_safe)
+    
     prepend_render_rails_context(result)
   end
 
