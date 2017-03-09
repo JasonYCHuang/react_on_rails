@@ -104,13 +104,13 @@ module ReactOnRailsHelper
 
     # Setup the page_loaded_js, which is the same regardless of prerendering or not!
     # The reason is that React is smart about not doing extra work if the server rendering did its job.
-    
+
     component_specification_tag =
-    content_tag(:div,
-                "",
-                class: "js-react-on-rails-component",
-                style: options.style,
-                data: options.data)
+      content_tag(:div,
+                  "",
+                  class: "js-react-on-rails-component",
+                  style: options.style,
+                  data: options.data)
 
     # Create the HTML rendering part
     result = server_rendered_react_component_html(options.props, options.name, options.dom_id,
@@ -227,7 +227,7 @@ module ReactOnRailsHelper
   private
 
   def json_safe_and_pretty(something)
-    if defined?(Rails) && Rails.env.development?
+    if Rails.env.development?
       ERB::Util.json_escape(JSON.pretty_generate(something.as_json))
     else
       ERB::Util.json_escape(something.to_json)
